@@ -10,9 +10,6 @@ library(keras)
 install_keras(tensorflow = "gpu")
 library(tm)
 
-setwd("~/Uni/2018-2/FIT5149 Applied Data Analysis/Assignment")
-
-
 ## Load Data
 text <- readLines("training_docs.txt")
 text <- as.data.frame(text)
