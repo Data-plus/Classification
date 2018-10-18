@@ -4,10 +4,16 @@
 #install.packages('curl')
 #install.packages("tm")
 #install.packages("qdap")
+#install.packages("formattable")
+
+set.seed(1234)
 
 library(keras)
 install_keras(tensorflow = "gpu")
 library(tm)
+
+setwd("~/Uni/2018-2/FIT5149 Applied Data Analysis/Assignment")
+
 
 ## Load Data
 text <- readLines("training_docs.txt")
@@ -89,18 +95,23 @@ compile_fit <- function(model, epochs=10, batch=32, split_ratio=0.2, optimizer="
 
 
 # Ensemble
-ensemble <- function(models, model_input){
+ensemble <- function(val_data = 'x_val', w = c(0.6, 0.20, 0.20)){
   
-  for (model in models){
-    outputs <- models[1]
-  }
+  N <- nrow(val_data)
+  w = c(0.6, 0.20, 0.20) # weighting
   
-  y <- mean(outputs)
+  # Probability storing
+  model1_pred <- predict_proba(object = cbi_lstm, x = val_data)
+  model2_pred <- predict_proba(object = conv_pool_cnn, x = val_data)
+  model3_pred <- predict_proba(object = model_test, x=val_data)
   
-  model <- Model(model_input, y, name='ensemble')
+  # Weighted average
+  cs <-(w[1]*model1_pred[1:N,]+w[2]*model2_pred[1:N,]+w[3]*model3_pred[1:N,])
   
-  return (model)
+  # Return prediction
+  return(apply(cs, MARGIN = 1,FUN = which.max))
 }
+
 
 
 
@@ -117,10 +128,11 @@ cleaned.docs = data.frame(text=sapply(corpus,identity), stringsAsFactors = F)
 head(cleaned.docs,1)
 
 # Only used for overviewing the features
-DTM_train <- DocumentTermMatrix(corpus, control=list(wordLengths=c(4,Inf)))
+# DTM_train <- DocumentTermMatrix(corpus, control=list(wordLengths=c(4,Inf)))
 # DTM_train # Number of features = terms: 159389
-DTM_train <- removeSparseTerms(DTM_train,0.97)
+# DTM_train <- removeSparseTerms(DTM_train,0.97)
 # DTM_train # Number of features = terms: 493
+# tfm <- weightTfIdf(TermDocumentMatrix(corpus[training_indices]))
 
 
 
@@ -149,13 +161,14 @@ training_indices <- indices[1:training_samples]
 validation_indices <- indices[(training_samples + 1):nrow(data)]
 
 x_train <- data[training_indices,]
-dtm_x_train <- DTM_train[training_indices,]
 y_train <- labels[training_indices]
 y_train = to_categorical(y_train,num_classes = length(unique(y_train))+1)
 
 x_val <- data[validation_indices,]
 y_val <- labels[validation_indices]
-y_val = to_categorical(y_val, num_classes = length(unique(y_val))+1)
+
+
+
 
 
 ########### Model 1 [ Convolutional Bi-directional LSTM ] 0.7506, epoch 3 ##############
@@ -179,6 +192,8 @@ F_score(table(y_val, predict_classes(cbi_lstm, x_val)))
 
 
 
+
+
 ########### Model 2 [ ConvPool-CNN-C ] 0.7187 ##############
 conv_pool_cnn <- keras_model_sequential() %>%
   layer_embedding(input_dim = max_words, output_dim = embedding_dim,
@@ -196,7 +211,7 @@ conv_pool_cnn <- keras_model_sequential() %>%
   layer_activation(24, activation='softmax')
 summary(conv_pool_cnn)
 
-compile_fit(conv_pool_cnn)
+compile_fit(conv_pool_cnn, epochs = 2)
 
 F_score(table(y_val, predict_classes(conv_pool_cnn, x_val)))
 
@@ -219,9 +234,23 @@ model_test <- keras_model_sequential() %>%
   layer_dense(units = 24, activation = "softmax")
 summary(model_test)
 
-compile_fit(model_test)
+compile_fit(model_test, 2)
 
 F_score(table(y_val, predict_classes(model_test, x_val)))
+
+
+
+## Ensemble ##
+
+en_prediction <- ensemble(val_data=x_val, w=c(0.6,0.2,0.2))
+F_score(table(y_val, en_prediction))
+table(y_val, en_prediction)
+
+
+
+
+
+
 
 
 
@@ -293,7 +322,7 @@ cbind(bl_cnn=cb_m, conv=conv_m, outperform=(conv_m-bc_m)/5)
 
 
 
-## Create Output file
+## Export output
 testing_label <- readLines("training_docs.txt")
 Y_test_predicted<-data.frame(Y_test_predicted)
 
@@ -320,7 +349,9 @@ sum(cbind(testing_labels_final==testing_labels_final1))/length(testing_labels_fi
 head(testing_labels_final)
 head(testing_labels_final1)
 
-              
+
+
+
 ######################################### BELOW IS FOR TESTING #################################################################
 
 
@@ -336,6 +367,8 @@ cbind(doc,Y_test_predicted)
 head(doc)
 
 
+
+
 head(Y_test_predicted)
 head(training_labels_final)
 
@@ -348,6 +381,8 @@ head(doc,1)
 
 head(doc)
 
+
+
 # F1
 cm_table
 history
@@ -356,9 +391,11 @@ F_score(cm_table)
 class_accuracy(cm_table)
 
 
-              
-           
-              
+
+
+
+
+
 ### Below needs to be completed
 
 #data.correct <- data.val[which(data.val$y==data.val$predicted),]
@@ -377,6 +414,8 @@ data.val <- data.frame(y=y_train,x=x_train, predicted=Y_test_model1)
 head(data.val,2)
 
 
+
+
 ########### Model 2 ##############
 # Create missclassified set
 data.miss <- data.val[which(data.val$y!=data.val$predicted),]
@@ -390,6 +429,8 @@ text_2 <- data.frame(y=y_train_miss, tokenizer$sequences_to_texts(x_train_miss))
 
 # For each category ...
 c2 <- text_2[text_2$y==2,]
+
+
 
 
 #define model2
@@ -443,13 +484,15 @@ cm_table3
 cm_table_n <- cm_table3
 
 
-## Model Save
-              
+
+
+## Save
+
 #keras_save(mod, "full_model.h5")
 #keras_save_weights(mod, "weights_model.h5")
 #keras_model_to_json(mod, "model_architecture.json")
 
-# installing keras gpu
+
 # install_keras(method = c("auto", "virtualenv", "conda"),
 #               conda = "auto", version = "default", tensorflow = "default",
 #               extra_packages = c("tensorflow-hub"))
