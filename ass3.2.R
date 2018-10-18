@@ -4,7 +4,6 @@
 #install.packages('curl')
 #install.packages("tm")
 #install.packages("qdap")
-#install.packages("formattable")
 
 library(keras)
 install_keras(tensorflow = "gpu")
@@ -102,9 +101,6 @@ ensemble <- function(models, model_input){
   
   return (model)
 }
-
-
-
 
 
 
@@ -232,20 +228,6 @@ F_score(table(y_val, predict_classes(model_test, x_val)))
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # # Saving Model
 # save_model_hdf5(cbi_lstm, "./Model/blcnn_model", overwrite = TRUE,
 #                 include_optimizer = TRUE)
@@ -311,7 +293,7 @@ cbind(bl_cnn=cb_m, conv=conv_m, outperform=(conv_m-bc_m)/5)
 
 
 
-## Export output
+## Create Output file
 testing_label <- readLines("training_docs.txt")
 Y_test_predicted<-data.frame(Y_test_predicted)
 
@@ -338,9 +320,7 @@ sum(cbind(testing_labels_final==testing_labels_final1))/length(testing_labels_fi
 head(testing_labels_final)
 head(testing_labels_final1)
 
-
-
-
+              
 ######################################### BELOW IS FOR TESTING #################################################################
 
 
@@ -356,8 +336,6 @@ cbind(doc,Y_test_predicted)
 head(doc)
 
 
-
-
 head(Y_test_predicted)
 head(training_labels_final)
 
@@ -370,8 +348,6 @@ head(doc,1)
 
 head(doc)
 
-
-
 # F1
 cm_table
 history
@@ -380,11 +356,9 @@ F_score(cm_table)
 class_accuracy(cm_table)
 
 
-
-
-
-
-
+              
+           
+              
 ### Below needs to be completed
 
 #data.correct <- data.val[which(data.val$y==data.val$predicted),]
@@ -403,8 +377,6 @@ data.val <- data.frame(y=y_train,x=x_train, predicted=Y_test_model1)
 head(data.val,2)
 
 
-
-
 ########### Model 2 ##############
 # Create missclassified set
 data.miss <- data.val[which(data.val$y!=data.val$predicted),]
@@ -418,8 +390,6 @@ text_2 <- data.frame(y=y_train_miss, tokenizer$sequences_to_texts(x_train_miss))
 
 # For each category ...
 c2 <- text_2[text_2$y==2,]
-
-
 
 
 #define model2
@@ -473,15 +443,13 @@ cm_table3
 cm_table_n <- cm_table3
 
 
-
-
-## Save
-
+## Model Save
+              
 #keras_save(mod, "full_model.h5")
 #keras_save_weights(mod, "weights_model.h5")
 #keras_model_to_json(mod, "model_architecture.json")
 
-
+# installing keras gpu
 # install_keras(method = c("auto", "virtualenv", "conda"),
 #               conda = "auto", version = "default", tensorflow = "default",
 #               extra_packages = c("tensorflow-hub"))
