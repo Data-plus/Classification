@@ -5,7 +5,7 @@
 #install.packages("tm")
 #install.packages("qdap")
 
-set.seed(1234)
+set.seed(12345)
 
 library(keras)
 install_keras(tensorflow = "gpu")
@@ -89,7 +89,6 @@ compile_fit <- function(model, epochs=10, batch=32, split_ratio=0.2, optimizer="
     validation_split = split_ratio
   )
   return (history)
-  
 }
 
 
@@ -97,7 +96,12 @@ compile_fit <- function(model, epochs=10, batch=32, split_ratio=0.2, optimizer="
 ensemble <- function(val_data = 'x_val', w = c(0.6, 0.20, 0.20)){
   
   N <- nrow(val_data)
-  w = c(0.6, 0.20, 0.20) # weighting
+  w = w # weighting
+  # reset existing
+  model1_pred <- 0
+  model2_pred <- 0
+  model3_pred <- 0
+  
   
   # Probability storing
   model1_pred <- predict_proba(object = cbi_lstm, x = val_data)
@@ -155,7 +159,7 @@ labels = as.numeric(gsub("C", "", labels))
 
 ## Data Split
 indices <- sample(1:nrow(data))
-training_samples = 80000
+training_samples = 100000
 training_indices <- indices[1:training_samples]
 validation_indices <- indices[(training_samples + 1):nrow(data)]
 
@@ -168,7 +172,8 @@ y_val <- labels[validation_indices]
 
 
 
-########### Model 1 [ Convolutional Bi-directional LSTM ] 0.7509, epoch 3 ##############
+########### Model 1 [ Convolutional Bi-directional LSTM ] ##############
+# 0.7579 epoch 3, 10k data
 cbi_lstm <- keras_model_sequential() %>%
   layer_embedding(input_dim = max_words, output_dim = embedding_dim,
                   input_length = maxlen) %>%
@@ -191,7 +196,7 @@ F_score(table(y_val, predict_classes(cbi_lstm, x_val)))
 
 
 
-########### Model 2 [ ConvPool-CNN-C ] 0.7092 ##############
+########### Model 2 [ ConvPool-CNN-C ] 0.7188 ##############
 conv_pool_cnn <- keras_model_sequential() %>%
   layer_embedding(input_dim = max_words, output_dim = embedding_dim,
                   input_length = maxlen) %>%
@@ -216,7 +221,7 @@ F_score(table(y_val, predict_classes(conv_pool_cnn, x_val)))
 
 
 
-########### Model 3 [ LSTM Conv Net ] 0.7241 ##############
+########### Model 3 [ LSTM Conv Net ] 0.7334 ##############
 model_test <- keras_model_sequential() %>%
   layer_embedding(input_dim = max_words, output_dim = embedding_dim,
                   input_length = maxlen) %>%
@@ -238,8 +243,13 @@ F_score(table(y_val, predict_classes(model_test, x_val)))
 
 
 ## Ensemble ##
-en_prediction <- ensemble(val_data=x_val, w=c(0.6,0.2,0.2))
-F_score(table(y_val, en_prediction)) # 0.7586
+en_prediction <- ensemble(val_data=x_val, w=c(0.5,0.3,0.2))
+
+F_score(table(y_val, en_prediction))
+# 0.7586 - 80k data - seed 1234 Actual Test run was 0.75
+# 0.7652 - 100k data, seed 12345 c(0.5,0.3,0.2) 
+# w=c(0.5,0.2,0.3) 0.7531831
+# w=c(0.5,0.3,0.2) 0.7652686
 table(y_val, en_prediction)
 
 
@@ -386,6 +396,12 @@ testing_labels_final1 <- write.table(doc, "C:/Users/abcd0/Documents/Uni/2018-2/F
 
 
 
+
+
+
+
+######################################### BELOW IS FOR TESTING #################################################################
+
 testing_labels_final <- readLines("training_labels_final.txt")
 testing_labels_final1 <- readLines("testing_labels_final1.txt")
 
@@ -395,9 +411,6 @@ head(testing_labels_final)
 head(testing_labels_final1)
 
 
-
-
-######################################### BELOW IS FOR TESTING #################################################################
 
 
 head(doc)
