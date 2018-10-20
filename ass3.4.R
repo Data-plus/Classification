@@ -246,10 +246,13 @@ F_score(table(y_val, predict_classes(model_test, x_val)))
 en_prediction <- ensemble(val_data=x_val, w=c(0.5,0.3,0.2))
 
 F_score(table(y_val, en_prediction))
-# 0.7586 - 80k data - seed 1234 Actual Test run was 0.75
+# 0.7586 - 80k data - seed 1234 'Actual Test run' was 0.757
+
 # 0.7652 - 100k data, seed 12345 c(0.5,0.3,0.2) 
 # w=c(0.5,0.2,0.3) 0.7531831
-# w=c(0.5,0.3,0.2) 0.7652686
+
+# Current best model 
+# seed 12345, w = c(0.5,0.3,0.2) F = 0.7655
 table(y_val, en_prediction)
 
 
@@ -271,6 +274,165 @@ table(y_val, en_prediction)
 # # Loading Model
 # cbi_lstm <- load_model_hdf5('./Model/blcnn_model')
 # conv_pool_cnn <- load_model_hdf5('./Model/conv_pool_cnn_model')
+
+
+
+
+
+
+
+
+#prediction
+##create model to compare accuracy of each model to each classes
+final_models_compare = data.frame(1:23)
+final_models_compare$classes = model3_acc$X1.23
+final_models_compare$model1_pred = model1_acc$V2
+final_models_compare$model2_pred = model2_acc$V2
+final_models_compare$model3_pred = model3_acc$V2
+
+## make prediction for each models
+model1_pred <- predict_proba(object = cbi_lstm, x = x_val)
+model2_pred <- predict_proba(object = conv_pool_cnn, x = x_val)
+model3_pred <- predict_proba(object = model_test, x=x_val)
+
+## select the model for each class that model is best on predicting that class
+model_choice = apply(data.frame(final_models_compare$model1_pred,final_models_compare$model2_pred,final_models_compare$model3_pred), MARGIN = 1,FUN = which.max)
+##make predictions
+model1_choice = apply(model1_pred[,1:23], MARGIN = 1,FUN = which.max)
+model2_choice = apply(model2_pred[,1:23], MARGIN = 1,FUN = which.max)
+model3_choice = apply(model3_pred[,1:23], MARGIN = 1,FUN = which.max)
+model_choice
+
+final_models_compare
+
+
+
+final_model_choice =data.frame(1:length(model1_choice))
+final_model_choice$m1c = 0
+final_model_choice$m1c[which(model1_choice %in% which(model_choice==1))] = model1_choice[which(model1_choice %in% which(model_choice==1))]
+
+final_model_choice
+
+which(model1_choice %in% which(model_choice==1))
+
+
+final_model_choice$m2c = 0
+final_model_choice$m2c[which(model2_choice %in% which(model_choice==2))] = model2_choice[which(model2_choice %in% which(model_choice==2))]
+
+final_model_choice$m3c = 0
+final_model_choice$m3c[which(model3_choice %in% which(model_choice==3))] = model3_choice[which(model3_choice %in% which(model_choice==3))]
+
+final_model_choice$mfc = 0
+final_model_choice
+max_compare = function(row){
+  if(row[1]==0 && row[2] ==0 && row[3]==0){
+    row[4] = model1_choice[row]
+  }
+  else if(row[1]==0 && row[2]==0){
+    row[4] = row[3]
+  }
+  else if(row[2]==0 && row[3]==0){
+    row[4] = row[1]
+  }
+  else if(row[1]==0 && row[3]==0){
+    row[4] = row[2]
+  }
+}
+
+model1_choice
+
+
+# Best model calss method
+N <- length(model1_choice)
+N
+
+for (row in 1:N){
+  final_model_choice[row,5] <- ifelse(max(final_model_choice[row,2:4])==0, model1_choice[row], 
+                                      ifelse(length(which(final_model_choice[200,2:4] != 0))>1, ))
+} 
+
+final_model_choice[,5]
+final_model_choice
+
+length(which(final_model_choice[200,2:4] != 0))
+
+final_models_compare[row[2],3]
+final_models_compare[row[4],5]
+
+which(max(final_models_compare[final_model_choice[200,2],3],
+          final_models_compare[final_model_choice[200,3],4],
+          final_models_compare[final_model_choice[200,4],5]))
+
+a <- final_model_choice[200,2:4]
+a
+
+which.max(c(final_models_compare[a$m1c,3], final_models_compare[a$m2c,4], final_models_compare[a$m3c,5]))
+
+
+final_models_compare[a$m1c,3]
+
+
+which.max(c(final_models_compare[final_model_choice[200,2],3],
+            final_models_compare[final_model_choice[200,3],4],
+            final_models_compare[final_model_choice[200,4],5]))
+
+
+final_models_compare[final_model_choice[200,2],3]
+final_models_compare[final_model_choice[200,3],4]
+final_models_compare[final_model_choice[200,4],5]
+
+
+final_models_compare
+
+final_model_choice[200,]
+
+
+final_models_compare
+
+y_val
+
+
+
+
+final_choice_model <- final_model_choice[,5]
+F_score(table(y_val, final_choice_model))
+table(y_val, final_choice_model)
+
+
+
+en_prediction <- ensemble(val_data=x_val, w=c(0.5,0.3,0.2))
+F_score(table(y_val, en_prediction))
+table(y_val, en_prediction)
+
+
+
+apply(final_model_choice[,c("m1c","m2c","m3c","mfc")], MARGIN = 1, FUN=max_compare)
+
+
+model1_pred_c <- predict_classes(object = cbi_lstm, x = x_val)
+model2_pred_c <- predict_classes(object = conv_pool_cnn, x = x_val)
+model3_pred_c <- predict_classes(object = model_test, x=x_val)
+
+model_full <- data.frame(model1_pred_c,model2_pred_c,model3_pred_c)
+
+model_full
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
